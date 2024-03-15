@@ -14,7 +14,7 @@ git clone https://github.com/2445868686/AiRename-Image.git
 ```
 ### Configure the AiRename
 Open config.json and edit the url and selector properties to match your needs.
-```python
+```json
 {
     "Api_key": "sk-xxxxxxxxxxxxxxxxxxxxxx",
     "Base_url":"https://api.openai.com",
@@ -27,5 +27,7 @@ Open config.json and edit the url and selector properties to match your needs.
 ### Run
 ```
 cd AiRename-Image
+```
+```
 python main.py
 ```
