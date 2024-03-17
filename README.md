@@ -12,22 +12,26 @@ Import Eagle, which can automatically recognize labels
 ```
 git clone https://github.com/2445868686/AiRename-Image.git
 ```
+```
+cd AiRename-Image
+```
+```
+pip install -r requirements.txt
+```
 ### Configure the AiRename
 Open config.json and edit the url and selector properties to match your needs.
-```json
+```python
 {
     "Api_key": "sk-xxxxxxxxxxxxxxxxxxxxxx",
     "Base_url":"https://api.openai.com",
     "Source_folder": "/Users/mac-mini-03/Desktop/test",
-    "Destination_folder": "/Users/mac-mini-03/Desktop/finish",
+    "Proxy_quality":0.8,  #Automatic pre compression ratio for images that are too large
     "Model": "gpt-4-vision-preview",
     "Prompt": "Summarize the content of the image in one sentence, no more than 10 words"
   }
 ```
 ### Run
 ```
-cd AiRename-Image
-```
-```
 python main.py
 ```
+Upon completion of the image renaming process, the files are stored in a subdirectory named `Finish` within the current directory.
