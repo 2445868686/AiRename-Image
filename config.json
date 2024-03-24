@@ -1,9 +1,10 @@
 {
-    "Api_key": "sk-xxxxxxxxxxxxxxxxxxxxxx",
-    "Base_url":"https://api.openai.com/v1/chat/completion",
-    "Source_folder": "/Users/mac-mini-03/Desktop/test",
+    "Api_key": "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "Base_url":"https://api.openai.com/v1/chat/completions",
+    "Source_folder": "D:\\Python Training\\test",
     "Proxy_quality":0.8,
     "Model": "gpt-4-vision-preview",
+    "Option": true,
     "Prompt": "Summarize the content of the image in one sentence, no more than 10 words"
   }
   

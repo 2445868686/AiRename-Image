@@ -23,15 +23,15 @@ Open config.json and edit the url and selector properties to match your needs.
 ```python
 {
     "Api_key": "sk-xxxxxxxxxxxxxxxxxxxxxx",
-    "Base_url":"https://api.openai.com",
+    "Base_url":"https://api.openai.com/v1/chat/completions",
     "Source_folder": "/Users/mac-mini-03/Desktop/test",
     "Proxy_quality":0.8,  #Automatic pre compression ratio for images that are too large
     "Model": "gpt-4-vision-preview",
-    "Prompt": "Summarize the content of the image in one sentence, no more than 10 words"
+    "Option": ture, #If it is 'true' , rename the source file; If it is 'false' , the new file will be stored in a subdirectory named 'Finish' in the current directory.
+    "Prompt": "Summarize the content of the image in one sentence,no more than 10 words"
   }
 ```
 ### Run
 ```
 python main.py
 ```
-Upon completion of the image renaming process, the files are stored in a subdirectory named `Finish` within the current directory.

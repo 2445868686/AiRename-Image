@@ -53,10 +53,12 @@ destination_folder = os.path.join(source_folder, 'Finish')
 Proxy_quality =config['Proxy_quality']
 gpt_model = config['Model']
 Prompt = config['Prompt']
+Option = config['Option']
 
 # 如果目标文件夹不存在，则创建它
-if not os.path.exists(destination_folder):
-    os.makedirs(destination_folder)
+if not Option :
+    if not os.path.exists(destination_folder):
+        os.makedirs(destination_folder)
 
 suffix_name = ('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.tif', '.webp', '.heif', '.heic',  '.svg')
 start_number = 0
@@ -105,8 +107,12 @@ for filename in os.listdir(source_folder):
                 if 'choices' in response_data and len(response_data['choices']) > 0 and 'message' in response_data['choices'][0] and 'content' in response_data['choices'][0]['message']:
                     new_name = response_data['choices'][0]['message']['content']
                     new_filename = f'{remove_punctuation_at_end(new_name)}.jpg'
-                    new_file = os.path.join(destination_folder, new_filename)
-                    shutil.copy(image_path, new_file)
+                    if Option :
+                        new_file = os.path.join(source_folder, new_filename)
+                        os.replace(image_path, new_file)
+                    else:
+                        new_file = os.path.join(destination_folder, new_filename)
+                        shutil.copy(image_path, new_file)
 #                    processed_count += 1
                     print(f'第{start_number}张图片重命名完成：{new_name}')
                     continue
