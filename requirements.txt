@@ -1,3 +1,5 @@
 openai
 Pillow
 requests
+PyQt5
+cairosvg
