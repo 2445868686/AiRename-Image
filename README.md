@@ -18,20 +18,9 @@ cd AiRename-Image
 ```
 pip install -r requirements.txt
 ```
-### Configure the AiRename
-Open config.json and edit the url and selector properties to match your needs.
-```python
-{
-    "Api_key": "sk-xxxxxxxxxxxxxxxxxxxxxx",
-    "Base_url":"https://api.openai.com/v1/chat/completions",
-    "Source_folder": "/Users/mac-mini-03/Desktop/test",
-    "Proxy_quality":0.8,  #Automatic pre compression ratio for images that are too large
-    "Model": "gpt-4-vision-preview",
-    "Option": ture, #If it is 'true' , rename the source file; If it is 'false' , the new file will be stored in a subdirectory named 'Finish' in the current directory.
-    "Prompt": "Summarize the content of the image in one sentence,no more than 10 words"
-  }
-```
 ### Run
 ```
 python main.py
 ```
+<img width="1445" alt="image" src="https://github.com/2445868686/AiRename-Image/assets/50979290/ab4d977e-1be6-4186-be74-a0df4f745fa1">
+
