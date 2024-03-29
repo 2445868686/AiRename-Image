@@ -1,9 +1,9 @@
 {
-    "Api_key": "sk-fNqVeJ1hsmRuD29M74A04f99D30242178e8eA12eC103C398",
-    "Base_url": "https://aium.cc/v1/chat/completions",
+    "Api_key": "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",
+    "Base_url": "https://api.openai.com/v1/chat/completions",
     "Source_folder": "/Users/mac-mini-03/Desktop/test",
     "Proxy_quality": 0.8,
     "Model": "gpt-4-vision-preview",
-    "Option": true,
+    "Option": false,
     "Prompt": "Provide a summary of the image in a single sentence, limited to 10 words. (Insert  5-8 keywords frequently used for categorization in the gallery within the parentheses.)"
 }
