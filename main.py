@@ -1,4 +1,5 @@
 from openai import OpenAI
+from datetime import datetime
 from PIL import Image
 import io
 import cairosvg
@@ -13,6 +14,8 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHB
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QIcon, QMouseEvent
 
+#export CAIRO_ROOT=/path/to/cairo
+#export PATH="/opt/homebrew/Cellar/cairo/1.18.0:$PATH"
 
 # Function to encode the image
 def encode_image(image_path):
@@ -49,6 +52,7 @@ def compress_and_encode_image(image_path, quality=85, max_size=(1080, 1080)):
         img.save(img_bytes, format=output_format, quality=quality)
         img_bytes.seek(0)
         base64_encoded = base64.b64encode(img_bytes.read()).decode('utf-8')
+       # print(f"{image_path} -> mime_type->{base64_encoded}")
 
     return base64_encoded, mime_type
 
@@ -56,7 +60,8 @@ def compress_and_encode_image(image_path, quality=85, max_size=(1080, 1080)):
 def process_images(config, output_text_signal):
     try:
         output_text_signal.emit("图片重命名已开始：")
-
+        now = datetime.now()
+        now.strftime("%Y-%m-%d")
         # 加载配置参数
         api_key = config['Api_key']
         base_url = config['Base_url']
@@ -81,13 +86,14 @@ def process_images(config, output_text_signal):
                 if filename.lower().endswith(suffix_name):
                     relative_path = os.path.relpath(root, source_folder)
                     image_path = os.path.join(source_folder, relative_path.lstrip('.'), filename)
-                    print(f"1.{image_path}")
                     # 获取图像格式
                     image_format = os.path.splitext(filename)[1][1:] 
-                    print(f"2.{image_format}")
-
+                    print(f"1.{image_format.upper()}图片加载成功")
+                    output_text_signal.emit(f"[{now.strftime("%Y-%m-%d")}]{image_format.upper()}图片加载成功")
                     if image_format.lower() == "svg":
-                        tmp_folder = os.path.join(root, 'tmp')  # 在当前目录创建 Finish 文件夹
+                        tmp_folder = os.path.join(root, '.airenametmp')  # 在当前目录创建 Finish 文件夹
+                        if os.path.exists(tmp_folder):
+                            shutil.rmtree(tmp_folder)
                         if not os.path.exists(tmp_folder):
                                 os.makedirs(tmp_folder)
                         # 使用 CairoSVG 将 SVG 转换为 PNG
@@ -108,7 +114,8 @@ def process_images(config, output_text_signal):
 
                     #base64_image = compress_and_encode_image(image_path, output_format=image_format, quality=quality_value, max_size=(512, 512))
                     start_number += 1 
-                     
+                    print(f"{now.strftime("%Y-%m-%d")}]正在使用GPT4识别，请等待。。。")
+                    output_text_signal.emit(f"[{now.strftime("%Y-%m-%d")}]正在使用GPT4识别，请等待。。。")
                     headers = {
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {api_key}"
@@ -137,13 +144,13 @@ def process_images(config, output_text_signal):
                     }
 
                     response = requests.post(base_url, headers=headers, json=payload)
-                    print(f"4.{response.status_code}")
+                    print(f"3.识别成功{response.status_code}")
                     try:
                         if response.status_code == 200:
                             response_data = response.json()
                             if 'choices' in response_data and len(response_data['choices']) > 0 and 'message' in response_data['choices'][0] and 'content' in response_data['choices'][0]['message']:
                                 new_name = response_data['choices'][0]['message']['content']
-                                new_filename = f'{remove_punctuation_at_end(new_name)}.{image_format}'
+                                new_filename = f'{new_name}.{image_format}'
                                 if Option :
                                     new_file = os.path.join(source_folder, relative_path, new_filename)
                                     os.replace(image_path, new_file)
@@ -152,19 +159,20 @@ def process_images(config, output_text_signal):
                                     if not os.path.exists(destination_folder):
                                         os.makedirs(destination_folder)
                                     new_file = os.path.join(destination_folder, new_filename)
-                                    shutil.copy(image_path, new_file)   
+                                    #shutil.copy(image_path, new_file)   
+                                    os.replace(image_path, new_file)
             #                    processed_count += 1
-                                output_text_signal.emit(f'第{start_number}张图片重命名完成：{new_name}')
+                                output_text_signal.emit(f'[{now.strftime("%Y-%m-%d")}]第{start_number}张图片重命名完成：{new_name}')
                                 continue
                     # 如果响应状态码不是200或缺少必要的数据，则打印错误并跳过此图片
-                        output_text_signal.emit(f"{response.status_code},无法处理第{start_number}张图片")
+                        output_text_signal.emit(f"[{now.strftime("%Y-%m-%d")}]{response.status_code}，检查你的Api_key或Base_url是否正确，无法处理第{start_number}张图片")
                     except Exception as e:
-                        output_text_signal.emit(f"处理图片时发生错误：{e}，跳过第{start_number}张图片。")
+                        output_text_signal.emit(f"[{now.strftime("%Y-%m-%d")}]处理图片时发生错误：{e}，跳过第{start_number}张图片。")
 
     except Exception as e:
-        output_text_signal.emit(f"运行过程中发生错误: {e}")
-    output_text_signal.emit(f"{start_number}张图片重命名完成")
-    temp_folder_path = os.path.join(root, 'tmp')  # temp文件夹的路径
+        output_text_signal.emit(f"[{now.strftime("%Y-%m-%d")}]运行过程中发生错误: {e}")
+    output_text_signal.emit(f"[{now.strftime("%Y-%m-%d")}]{start_number}张图片重命名完成")
+    temp_folder_path = os.path.join(root, '.airenametmp')  # temp文件夹的路径
     if os.path.exists(temp_folder_path):
         shutil.rmtree(temp_folder_path)
         
@@ -315,7 +323,7 @@ class ConfigGUI(QMainWindow):
         self.layout.addWidget(self.prompt_text_edit)
 
     def create_option_checkbox(self):
-        self.option_check = QCheckBox("Option,Check to rename current file; otherwise, save new in 'Finish' subdirectory.")
+        self.option_check = QCheckBox("Option,Check to rename current file; otherwise, move to the 'Finish' subdirectory.")
         self.option_check.setChecked(self.config.get('Option', False))
         self.option_check.stateChanged.connect(lambda: self.update_config('Option', self.option_check.isChecked()))
         self.layout.addWidget(self.option_check)
