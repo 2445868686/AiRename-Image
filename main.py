@@ -80,7 +80,7 @@ def process_images(config, output_text_signal):
 
         for root, dirs, files in os.walk(source_folder):   
              # 在进入下一级目录之前，过滤掉不需要遍历的目录（如 "tmp"）
-            dirs[:] = [d for d in dirs if d != 'tmp']
+            dirs[:] = [d for d in dirs if d != '.airenametmp']
             for filename in files:
             # 检查文件是否是图片
                 if filename.lower().endswith(suffix_name):
