@@ -10,7 +10,7 @@ import sys
 import os
 import json
 import threading
-##import cairosvg
+import cairosvg
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QSpinBox, QPushButton, QTextEdit, QCheckBox, QMessageBox, QFileDialog, QComboBox
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, QTimer
 from PyQt5.QtGui import QIcon, QMouseEvent
