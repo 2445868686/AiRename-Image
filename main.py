@@ -10,7 +10,7 @@ import sys
 import os
 import json
 import threading
-import cairosvg
+##import cairosvg
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QSpinBox, QPushButton, QTextEdit, QCheckBox, QMessageBox, QFileDialog, QComboBox
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, QTimer
 from PyQt5.QtGui import QIcon, QMouseEvent
@@ -37,7 +37,7 @@ def compress_and_encode_image(image_path, quality=85, max_size=(1080, 1080)):
         img_bytes.seek(0)
         base64_encoded = base64.b64encode(img_bytes.read()).decode('utf-8')
 
-    return base64_encoded, mime_type
+    return base64_encoded, mime_type, output_format
 
 class Counter:
     def __init__(self):
@@ -68,7 +68,9 @@ def process_image(image_path, config, output_text_signal, stop_event, success_co
         now = datetime.now()
         quality_value = min(95, max(1, int(config['Proxy_quality'] * 10)))
 
-        if image_path.lower().endswith(".svg"):
+        original_format = os.path.splitext(image_path)[1][1:].upper()  # 获取原始图像格式
+
+        if original_format.lower() == "svg":
             tmp_folder = os.path.join(os.path.dirname(image_path), '.airenametmp')
             if os.path.exists(tmp_folder):
                 shutil.rmtree(tmp_folder)
@@ -79,8 +81,9 @@ def process_image(image_path, config, output_text_signal, stop_event, success_co
             output_png_path = os.path.join(tmp_folder, output_png_filename)
             cairosvg.svg2png(url=image_path, write_to=output_png_path)
             image_path = output_png_path
+            original_format = "PNG"  # 转换后格式为PNG
 
-        encoded_image, mime_type = compress_and_encode_image(image_path, quality=quality_value, max_size=(512, 512))
+        encoded_image, mime_type, image_format = compress_and_encode_image(image_path, quality=quality_value, max_size=(512, 512))
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
@@ -122,7 +125,7 @@ def process_image(image_path, config, output_text_signal, stop_event, success_co
             # 检查最后一个字符是否是')'或'）'
             if result[-1] not in [')', '）']:
                 result = result[:-1]
-            new_name = f"{result}.jpg"
+            new_name = f"{result}.{original_format.lower()}"
             relative_path = os.path.relpath(os.path.dirname(image_path), config["Source_folder"])
             new_path = os.path.join(config["Source_folder"], relative_path, new_name)
             if option:
@@ -328,13 +331,15 @@ class ConfigGUI(QMainWindow):
             
         else:
             self.thread.stop()
-            self.timer.start(3000)  # 每秒更新一次进度
+            self.timer.start(1000)  # 每秒更新一次进度
             self.start_button.setEnabled(False)  # 禁用按钮
 
     def update_progress(self):
         self.output_text_box.append(f"还有任务正在进行中,请稍等。。。")
         if self.thread.active_count() == 0:
             self.timer.stop()
+            self.start_button.setEnabled(True)  # 启用按钮
+            self.start_button.setText("Start")
 
     @pyqtSlot(str)
     def update_output_text(self, text):
