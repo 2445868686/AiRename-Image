@@ -10,7 +10,7 @@ import sys
 import os
 import json
 import threading
-##import cairosvg
+import cairosvg
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QSpinBox, QPushButton, QTextEdit, QCheckBox, QMessageBox, QFileDialog, QComboBox
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, QTimer
 from PyQt5.QtGui import QIcon, QMouseEvent
@@ -80,10 +80,10 @@ def process_image(image_path, config, output_text_signal, stop_event, success_co
             output_png_filename = os.path.splitext(os.path.basename(image_path))[0] + ".png"
             output_png_path = os.path.join(tmp_folder, output_png_filename)
             cairosvg.svg2png(url=image_path, write_to=output_png_path)
-            image_path = output_png_path
-            original_format = "PNG"  # 转换后格式为PNG
-
-        encoded_image, mime_type, image_format = compress_and_encode_image(image_path, quality=quality_value, max_size=(512, 512))
+            encoded_image, mime_type, image_format = compress_and_encode_image(output_png_path, quality=quality_value, max_size=(512, 512))
+        else:
+            encoded_image, mime_type, image_format = compress_and_encode_image(image_path, quality=quality_value, max_size=(512, 512))
+        
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
@@ -347,6 +347,9 @@ class ConfigGUI(QMainWindow):
 
     def on_main_logic_finished(self):
         self.timer.stop()
+        tmp_folder = os.path.join(self.config['Source_folder'], '.airenametmp')
+        if os.path.exists(tmp_folder):
+            shutil.rmtree(tmp_folder)
         QMessageBox.information(self, "完成", f"图片重命名已完成！")
         self.start_button.setText("Start")
 
