@@ -10,10 +10,19 @@ import sys
 import os
 import json
 import threading
-import cairosvg
+#import cairosvg
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QSpinBox, QPushButton, QTextEdit, QCheckBox, QMessageBox, QFileDialog, QComboBox
 from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, QTimer
 from PyQt5.QtGui import QIcon, QMouseEvent
+
+def sanitize_filename(filename):
+    """
+    清除文件名中非法的字符，Windows系统中不允许出现下列字符：\ / : * ? " < > |
+    """
+    # 去除首尾的空格和双引号
+    filename = filename.strip().strip('"')
+    # 使用正则表达式替换非法字符
+    return re.sub(r'[\\/:*?"<>|]', '', filename)
 
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
@@ -121,10 +130,12 @@ def process_image(image_path, config, output_text_signal, stop_event, success_co
 
         if 'choices' in response_data and len(response_data['choices']) > 0:
             result = response_data['choices'][0]['message']['content']
-            print(result)
+            print("原始返回结果:", result)
             # 检查最后一个字符是否是')'或'）'
-            if result[-1] not in [')', '）']:
+            if result and result[-1] not in [')', '）']:
                 result = result[:-1]
+            # 清洗返回结果，去除不合法字符
+            result = sanitize_filename(result)
             new_name = f"{result}.{original_format.lower()}"
             relative_path = os.path.relpath(os.path.dirname(image_path), config["Source_folder"])
             new_path = os.path.join(config["Source_folder"], relative_path, new_name)
@@ -161,12 +172,10 @@ def process_images_concurrently(config, output_text_signal, stop_event, active_c
     image_paths = []
     max_workers = 5  # 设置最大并发线程数
 
-    for root, dirs, files in os.walk(source_folder):
-        dirs[:] = [d for d in dirs if d != '.airenametmp']
-        for filename in files:
-            if filename.lower().endswith(suffix_name):
-                image_path = os.path.join(root, filename)
-                image_paths.append(image_path)
+    for filename in os.listdir(source_folder):
+        if filename.lower().endswith(suffix_name):
+            image_path = os.path.join(source_folder, filename)
+            image_paths.append(image_path)
 
     success_counter = Counter()
     failure_counter = Counter()
@@ -175,7 +184,9 @@ def process_images_concurrently(config, output_text_signal, stop_event, active_c
     output_text_signal.emit(f"开始处理{len(image_paths)}张图片，线程:{max_workers}")
     output_text_signal.emit(f"模型：{config['Model']}")
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(process_image, image_path, config, output_text_signal, stop_event, success_counter, failure_counter, num_counter, active_counter): image_path for image_path in image_paths}
+        futures = {executor.submit(process_image, image_path, config, output_text_signal, stop_event, 
+                                     success_counter, failure_counter, num_counter, active_counter): image_path 
+                   for image_path in image_paths}
         for future in concurrent.futures.as_completed(futures):
             if stop_event.is_set():
                 break
@@ -184,6 +195,7 @@ def process_images_concurrently(config, output_text_signal, stop_event, active_c
             except Exception as exc:
                 output_text_signal.emit(f'生成异常: {exc}')
     return len(image_paths), success_counter.value, failure_counter.value
+
 
 class MainLogicThread(QThread):
     def __init__(self, gui, *args, **kwargs):
@@ -233,21 +245,23 @@ class ConfigGUI(QMainWindow):
         self.thread.finished.connect(self.on_main_logic_finished)
         self.thread.output_text.connect(self.update_output_text)
         self.setWindowTitle('AiRename-Image')
-        self.setGeometry(100, 100, 400, 400)
+        self.setGeometry(100, 100, 600, 500)
         self.centerWindow()
         self.widget = QWidget(self)
         self.setCentralWidget(self.widget)
         self.layout = QVBoxLayout()
+
         self.config_path = 'config.json'
         self.config = self.load_config()
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_progress)
 
         self.init_ui()
         self.widget.setLayout(self.layout)
         self.start_button = QPushButton("Start", self)
         self.start_button.clicked.connect(self.start_main_logic)
         self.layout.addWidget(self.start_button)
+
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_progress)
 
     def centerWindow(self):
         screen = QApplication.primaryScreen().geometry()
@@ -263,9 +277,19 @@ class ConfigGUI(QMainWindow):
         return {}
 
     def init_ui(self):
+        self.setStyleSheet("QWidget { font-family: Arial, sans-serif; }"
+                           "QPushButton { background-color: #4CAF50; color: white; padding: 10px; border-radius: 5px; font-size: 16px; }"
+                           "QPushButton:hover { background-color: #45a049; }"
+                           "QLabel { font-size: 14px; color: #333333; }"
+                           "QLineEdit, QSpinBox, QTextEdit { padding: 5px; border: 1px solid #ccc; font-size: 14px; border-radius: 5px; }"
+                           "QComboBox { padding: 5px; font-size: 14px; border-radius: 5px; }"
+                           "QTextEdit { background-color: #f4f4f4; }"
+                           "QCheckBox { font-size: 14px; }")
+
         self.create_label_and_line_edit('Api_key')
         self.create_label_and_line_edit('Base_url')
-        self.source_folder_label = QLabel('Source_folder')
+
+        self.source_folder_label = QLabel('Source Folder')
         self.layout.addWidget(self.source_folder_label)
         self.source_folder_edit = FolderLineEdit(self.update_config, self)
         self.source_folder_edit.setText(self.config.get('Source_folder', ''))
@@ -283,7 +307,7 @@ class ConfigGUI(QMainWindow):
         self.model_combo.currentTextChanged.connect(lambda: self.update_config('Model', self.model_combo.currentText()))
         model_proxy_layout.addWidget(self.model_combo)
 
-        self.proxy_quality_label = QLabel('Proxy_quality')
+        self.proxy_quality_label = QLabel('Proxy Quality')
         self.proxy_quality_spin = QSpinBox()
         self.proxy_quality_spin.setRange(0, 100)
         self.proxy_quality_spin.setValue(int(self.config.get('Proxy_quality', 0) * 100))
@@ -293,16 +317,18 @@ class ConfigGUI(QMainWindow):
 
         self.layout.addLayout(model_proxy_layout)
         self.create_option_checkbox()
+
         self.output_text_box = QTextEdit(self)
         self.output_text_box.setReadOnly(True)
         self.layout.addWidget(self.output_text_box)
 
-    def select_source_folder(self):
-        directory = QFileDialog.getExistingDirectory(self, "选择文件夹")
-        if directory:
-            self.config['Source_folder'] = directory
-            self.source_folder_edit.setText(directory)
-            self.update_config()
+    def create_label_and_line_edit(self, key):
+        label = QLabel(key)
+        self.layout.addWidget(label)
+        line_edit = QLineEdit(self)
+        line_edit.setText(str(self.config.get(key, '')))
+        line_edit.textChanged.connect(lambda: self.update_config(key, line_edit.text()))
+        self.layout.addWidget(line_edit)
 
     def create_prompt_editor(self):
         label = QLabel('Prompt')
@@ -313,7 +339,7 @@ class ConfigGUI(QMainWindow):
         self.layout.addWidget(self.prompt_text_edit)
 
     def create_option_checkbox(self):
-        self.option_check = QCheckBox("Option,Check to rename current file; otherwise, move to the 'Finish' subdirectory.")
+        self.option_check = QCheckBox("Option (Check to rename current file, uncheck to move to 'Finish')")
         self.option_check.setChecked(self.config.get('Option', False))
         self.option_check.stateChanged.connect(lambda: self.update_config('Option', self.option_check.isChecked()))
         self.layout.addWidget(self.option_check)
@@ -328,7 +354,6 @@ class ConfigGUI(QMainWindow):
         if self.start_button.text() == "Start":
             self.start_button.setText("Stop")
             self.thread.start()
-            
         else:
             self.thread.stop()
             self.timer.start(1000)  # 每秒更新一次进度
@@ -352,15 +377,6 @@ class ConfigGUI(QMainWindow):
             shutil.rmtree(tmp_folder)
         QMessageBox.information(self, "完成", f"图片重命名已完成！")
         self.start_button.setText("Start")
-
-    def create_label_and_line_edit(self, key):
-        label = QLabel(key)
-        self.layout.addWidget(label)
-        line_edit = QLineEdit(self)
-        line_edit.setText(str(self.config.get(key, '')))
-        line_edit.textChanged.connect(lambda: self.update_config(key, line_edit.text()))
-        self.layout.addWidget(line_edit)
-
 def main():
     with open("config.json", "r") as file:
         config = json.load(file)
